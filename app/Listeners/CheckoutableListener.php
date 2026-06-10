@@ -269,6 +269,7 @@ class CheckoutableListener
         }
     }
 
+
     /**
      * Generates a checkout acceptance
      *

@@ -810,119 +810,124 @@ class Helper
      *
      * @return array
      */
-    public static function checkLowInventory()
-    {
-        $alert_threshold = Setting::getSettings()->alert_threshold;
-        $consumables = Consumable::withCount('consumableAssignments as consumables_users_count')->whereNotNull('min_amt')->get();
-        $accessories = Accessory::withCount('checkouts as checkouts_count')->whereNotNull('min_amt')->get();
-        $components = Component::withCount('assets as sum_unconstrained_assets')->whereNotNull('min_amt')->get();
-        $asset_models = AssetModel::where('min_amt', '>', 0)->withCount(['availableAssets', 'assets'])->get();
-        $licenses = License::withCount('availCount as licenses_available')->where('min_amt', '>', 0)->get();
+public static function checkLowInventory()
+{
+    $alert_threshold = \App\Models\Setting::getSettings()->alert_threshold;
+    $consumables = Consumable::withCount('consumableAssignments as consumable_assignments_count')->whereNotNull('min_amt')->get();
+    $accessories = Accessory::withCount('checkouts as checkouts_count')->whereNotNull('min_amt')->get();
+    $components = Component::whereNotNull('min_amt')->get();
+    $asset_models = AssetModel::where('min_amt', '>', 0)->get();
+    $licenses = License::where('min_amt', '>', 0)->get();
 
-        $items_array = [];
-        $all_count = 0;
+    $items_array = [];
+    $all_count = 0;
 
-        foreach ($consumables as $consumable) {
-            $avail = $consumable->numRemaining();
-            if ($avail <= ($consumable->min_amt) + $alert_threshold) {
-                if ($consumable->qty > 0) {
-                    $percent = number_format((($avail / $consumable->qty) * 100), 0);
-                } else {
-                    $percent = 100;
-                }
-
-                $items_array[$all_count]['id'] = $consumable->id;
-                $items_array[$all_count]['name'] = $consumable->name;
-                $items_array[$all_count]['type'] = 'consumables';
-                $items_array[$all_count]['percent'] = $percent;
-                $items_array[$all_count]['remaining'] = $avail;
-                $items_array[$all_count]['min_amt'] = $consumable->min_amt;
-                $all_count++;
-            }
-        }
-
-        foreach ($accessories as $accessory) {
-            $avail = $accessory->qty - $accessory->checkouts_count;
-            if ($avail <= ($accessory->min_amt) + $alert_threshold) {
-                if ($accessory->qty > 0) {
-                    $percent = number_format((($avail / $accessory->qty) * 100), 0);
-                } else {
-                    $percent = 100;
-                }
-
-                $items_array[$all_count]['id'] = $accessory->id;
-                $items_array[$all_count]['name'] = $accessory->name;
-                $items_array[$all_count]['type'] = 'accessories';
-                $items_array[$all_count]['percent'] = $percent;
-                $items_array[$all_count]['remaining'] = $avail;
-                $items_array[$all_count]['min_amt'] = $accessory->min_amt;
-                $all_count++;
-            }
-        }
-
-        foreach ($components as $component) {
-            $avail = $component->numRemaining();
-            if ($avail <= ($component->min_amt) + $alert_threshold) {
-                if ($component->qty > 0) {
-                    $percent = number_format((($avail / $component->qty) * 100), 0);
-                } else {
-                    $percent = 100;
-                }
-
-                $items_array[$all_count]['id'] = $component->id;
-                $items_array[$all_count]['name'] = $component->name;
-                $items_array[$all_count]['type'] = 'components';
-                $items_array[$all_count]['percent'] = $percent;
-                $items_array[$all_count]['remaining'] = $avail;
-                $items_array[$all_count]['min_amt'] = $component->min_amt;
-                $all_count++;
-            }
-        }
-
-        foreach ($asset_models as $asset_model) {
-
-            $asset = new Asset;
-            $total_owned = $asset_model->assets_count; // requires the withCount() clause in the initial query!
-            $avail = $asset_model->available_assets_count; // requires the withCount() clause in the initial query!
-
-            if ($avail <= ($asset_model->min_amt) + $alert_threshold) {
-                if ($avail > 0) {
-                    $percent = number_format((($avail / $total_owned) * 100), 0);
-                } else {
-                    $percent = 100;
-                }
-                $items_array[$all_count]['id'] = $asset_model->id;
-                $items_array[$all_count]['name'] = $asset_model->name;
-                $items_array[$all_count]['type'] = 'models';
-                $items_array[$all_count]['percent'] = $percent;
-                $items_array[$all_count]['remaining'] = $avail;
-                $items_array[$all_count]['min_amt'] = $asset_model->min_amt;
-                $all_count++;
-            }
-        }
-
-        foreach ($licenses as $license) {
-            $avail = $license->remaincount();
-            if ($avail <= ($license->min_amt) + $alert_threshold) {
-                if ($avail > 0) {
-                    $percent = number_format((($avail / $license->min_amt) * 100), 0);
-                } else {
-                    $percent = 100;
-                }
-
-                $items_array[$all_count]['id'] = $license->id;
-                $items_array[$all_count]['name'] = $license->name;
-                $items_array[$all_count]['type'] = 'licenses';
-                $items_array[$all_count]['percent'] = $percent;
-                $items_array[$all_count]['remaining'] = $avail;
-                $items_array[$all_count]['min_amt'] = $license->min_amt;
-                $all_count++;
+    foreach ($consumables as $consumable) {
+        $avail = $consumable->numRemaining();
+        if ($avail < ($consumable->min_amt) + $alert_threshold) {
+            if ($consumable->qty > 0) {
+                $percent = number_format((($avail / $consumable->qty) * 100), 0);
+            } else {
+                $percent = 100;
             }
 
+            $items_array[$all_count]['id'] = $consumable->id;
+            $items_array[$all_count]['company_id'] = $consumable->company_id;
+            $items_array[$all_count]['name'] = $consumable->name;
+            $items_array[$all_count]['type'] = 'consumables';
+            $items_array[$all_count]['percent'] = $percent;
+            $items_array[$all_count]['remaining'] = $avail;
+            $items_array[$all_count]['min_amt'] = $consumable->min_amt;
+            $all_count++;
         }
-
-        return $items_array;
     }
+
+    foreach ($accessories as $accessory) {
+        $avail = $accessory->qty - $accessory->checkouts_count;
+        if ($avail < ($accessory->min_amt) + $alert_threshold) {
+            if ($accessory->qty > 0) {
+                $percent = number_format((($avail / $accessory->qty) * 100), 0);
+            } else {
+                $percent = 100;
+            }
+
+            $items_array[$all_count]['id'] = $accessory->id;
+            $items_array[$all_count]['company_id'] = $accessory->company_id;
+            $items_array[$all_count]['name'] = $accessory->name;
+            $items_array[$all_count]['type'] = 'accessories';
+            $items_array[$all_count]['percent'] = $percent;
+            $items_array[$all_count]['remaining'] = $avail;
+            $items_array[$all_count]['min_amt'] = $accessory->min_amt;
+            $all_count++;
+        }
+    }
+
+    foreach ($components as $component) {
+        $avail = $component->numRemaining();
+        if ($avail < ($component->min_amt) + $alert_threshold) {
+            if ($component->qty > 0) {
+                $percent = number_format((($avail / $component->qty) * 100), 0);
+            } else {
+                $percent = 100;
+            }
+
+            $items_array[$all_count]['id'] = $component->id;
+            $items_array[$all_count]['company_id'] = $component->company_id;
+            $items_array[$all_count]['name'] = $component->name;
+            $items_array[$all_count]['type'] = 'components';
+            $items_array[$all_count]['percent'] = $percent;
+            $items_array[$all_count]['remaining'] = $avail;
+            $items_array[$all_count]['min_amt'] = $component->min_amt;
+            $all_count++;
+        }
+    }
+
+    foreach ($asset_models as $asset_model){
+
+        $asset = new Asset();
+        $total_owned = $asset->where('model_id', '=', $asset_model->id)->count();
+        $avail = $asset->where('model_id', '=', $asset_model->id)->whereNull('assigned_to')->count();
+
+        if ($avail < ($asset_model->min_amt) + $alert_threshold) {
+            if ($avail > 0) {
+                $percent = number_format((($avail / $total_owned) * 100), 0);
+            } else {
+                $percent = 100;
+            }
+            $items_array[$all_count]['id'] = $asset_model->id;
+            $items_array[$all_count]['company_id'] = $asset_model->company_id;
+            $items_array[$all_count]['name'] = $asset_model->name;
+            $items_array[$all_count]['type'] = 'models';
+            $items_array[$all_count]['percent'] = $percent;
+            $items_array[$all_count]['remaining'] = $avail;
+            $items_array[$all_count]['min_amt'] = $asset_model->min_amt;
+            $all_count++;
+        }
+    }
+
+    foreach ($licenses as $license){
+        $avail = $license->remaincount();
+        if ($avail < ($license->min_amt) + $alert_threshold) {
+            if ($avail > 0) {
+                $percent = number_format((($avail / $license->min_amt) * 100), 0);
+            } else {
+                $percent = 100;
+            }
+
+            $items_array[$all_count]['id'] = $license->id;
+            $items_array[$all_count]['company_id'] = $license->company_id;
+            $items_array[$all_count]['name'] = $license->name;
+            $items_array[$all_count]['type'] = 'licenses';
+            $items_array[$all_count]['percent'] = $percent;
+            $items_array[$all_count]['remaining'] = $avail;
+            $items_array[$all_count]['min_amt'] = $license->min_amt;
+            $all_count++;
+        }
+
+    }
+
+    return $items_array;
+}    
 
     /**
      * Check if the file is an image, so we can show a preview

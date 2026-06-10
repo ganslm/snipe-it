@@ -4,8 +4,8 @@ return [
 
     'Accessory_Checkin_Notification' => 'Zubehör zurückgenommen',
     'Accessory_Checkout_Notification' => 'Zubehör herausgegeben|:count Zubehörteile herausgegeben',
-    'Asset_Checkin_Notification' => 'Asset zurückgenommen: :tag',
-    'Asset_Checkout_Notification' => 'Asset herausgegeben: :tag',
+    'Asset_Checkin_Notification' => 'Rückgabebestätigung IT-Hardware',
+    'Asset_Checkout_Notification' => 'Empfangsbestätigung IT-Hardware',
     'Confirm_Accessory_Checkin' => 'Bestätigung einer Zubehör Rücknahme',
     'Confirm_Asset_Checkin' => 'Bestätigung einer Asset Rücknahme',
     'Confirm_component_checkin' => 'Bestätigung der Zurücknahme von Komponenten',

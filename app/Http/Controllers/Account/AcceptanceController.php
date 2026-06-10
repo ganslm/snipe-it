@@ -20,6 +20,7 @@ use App\Models\User;
 use App\Notifications\AcceptanceItemAcceptedNotification;
 use App\Notifications\AcceptanceItemAcceptedToUserNotification;
 use App\Notifications\AcceptanceItemDeclinedNotification;
+use App\Notifications\CheckoutAcceptanceNotification;
 use Exception;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -28,9 +29,24 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Notification;
 
 class AcceptanceController extends Controller
 {
+
+private function webhookSelected()
+{
+    if (
+        Setting::getSettings()->webhook_selected === 'slack' ||
+        Setting::getSettings()->webhook_selected === 'general'
+    ) {
+        return 'slack';
+    }
+
+    return Setting::getSettings()->webhook_selected;
+}
+
+
     /**
      * Show a listing of pending checkout acceptances for the current user
      */
@@ -247,7 +263,7 @@ class AcceptanceController extends Controller
             $acceptance->accept($sig_filename, $item->getEula(), $pdf_filename, $request->input('note'));
 
             // Send the PDF to the signing user
-            if (($request->input('send_copy') === '1') && ($assignedUser->email !== '')) {
+            /*if (($request->input('send_copy') === '1') && ($assignedUser->email !== '')) {
 
                 // Add the attachment for the signing user into the $data array
                 $data['file'] = $pdf_filename;
@@ -257,12 +273,30 @@ class AcceptanceController extends Controller
                     Log::warning($e);
                 }
             }
+            */
+
             try {
                 $acceptance->notify((new AcceptanceItemAcceptedNotification($data))->locale(Setting::getSettings()->locale));
             } catch (Exception $e) {
                 Log::warning($e);
             }
             event(new CheckoutAccepted($acceptance));
+
+$sendCopy = ($request->input('send_copy') === '1') && !empty($assignedUser->email);
+
+
+Notification::route(
+    $this->webhookSelected(),
+    Setting::getSettings()->webhook_endpoint
+)->notify(
+    new CheckoutAcceptanceNotification(
+        $acceptance->checkoutable,
+        $acceptance->assignedTo,
+        auth()->user(),
+        $acceptance,
+        $sendCopy
+    )
+);
 
             $return_msg = trans('admin/users/message.accepted');
 
